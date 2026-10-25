@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Add the block that loads this plugin's keybindings to ~/.config/hypr/bindings.lua.
+# Safe to run again: an existing block (and the settings in it) is left alone.
+set -euo pipefail
+
+ID=a-b.other-monitor-workspaces
+BINDINGS=$HOME/.config/hypr/bindings.lua
+BEGIN="-- >>> $ID >>>"
+
+fail() { echo "setup: $*" >&2; exit 1; }
+
+[[ -f $BINDINGS ]] || fail "$BINDINGS not found (this plugin needs Omarchy's Lua Hyprland config)"
+if grep -qxF -- "$BEGIN" "$BINDINGS"; then
+  echo "Already set up; edit the settings in the block in $BINDINGS."
+  exit 0
+fi
+
+backup=$BINDINGS.bak.$(date +%s)
+cp "$BINDINGS" "$backup"
+[[ ! -s $BINDINGS || -z $(tail -c1 "$BINDINGS") ]] || printf '\n' >>"$BINDINGS"
+cat >>"$BINDINGS" <<EOF
+$BEGIN
+-- Other Monitor Workspaces plugin: settings are explained in its README.md; remove this block with its ./teardown.
+do
+	local path = os.getenv("HOME") .. "/.config/omarchy/plugins/$ID/hypr/other-monitor-workspaces.lua"
+	local file = io.open(path)
+	if file then
+		file:close()
+		dofile(path).setup({
+			selectors = { "+1" },
+			keep_focus = true,
+			mods = "SUPER + CTRL + SHIFT",
+		})
+	end
+end
+-- <<< $ID <<<
+EOF
+
+if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] && command -v hyprctl >/dev/null; then
+  hyprctl reload >/dev/null
+  errors=$(hyprctl configerrors 2>/dev/null || true)
+  [[ -z ${errors//[[:space:]]/} ]] || echo "setup: Hyprland reported config errors:"$'\n'"$errors" >&2
+fi
+
+echo "Added the Other Monitor Workspaces block to $BINDINGS (backup: $backup)."
+echo "SUPER + CTRL + SHIFT + 1..0 now switches the other monitor's workspace."
+echo "Change settings in that block, then run: hyprctl reload"

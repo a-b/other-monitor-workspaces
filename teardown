@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Remove the block ./setup added to ~/.config/hypr/bindings.lua. Safe to run again.
+set -euo pipefail
+
+ID=a-b.other-monitor-workspaces
+BINDINGS=$HOME/.config/hypr/bindings.lua
+BEGIN="-- >>> $ID >>>"
+END="-- <<< $ID <<<"
+
+fail() { echo "teardown: $*" >&2; exit 1; }
+
+if [[ ! -f $BINDINGS ]] || ! grep -qxF -- "$BEGIN" "$BINDINGS"; then
+  echo "Nothing to remove."
+  exit 0
+fi
+grep -qxF -- "$END" "$BINDINGS" || fail "found '$BEGIN' but not '$END' in $BINDINGS; remove the block by hand"
+
+backup=$BINDINGS.bak.$(date +%s)
+cp "$BINDINGS" "$backup"
+awk -v begin="$BEGIN" -v end="$END" '
+  $0 == begin { skip = 1; next }
+  skip && $0 == end { skip = 0; next }
+  !skip
+' "$BINDINGS" >"$BINDINGS.tmp"
+mv "$BINDINGS.tmp" "$BINDINGS"
+
+if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] && command -v hyprctl >/dev/null; then
+  hyprctl reload >/dev/null
+fi
+
+echo "Removed the Other Monitor Workspaces block from $BINDINGS (backup: $backup)."
+echo "Remove the plugin itself with: omarchy plugin remove $ID"
