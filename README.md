@@ -1,5 +1,7 @@
 # Other Monitor Workspaces
 
+[![CI](https://github.com/a-b/other-monitor-workspaces/actions/workflows/ci.yml/badge.svg)](https://github.com/a-b/other-monitor-workspaces/actions/workflows/ci.yml)
+
 `SUPER + CTRL + SHIFT + 1..0` switches the monitor you are *not* focused on to its workspace N, numbered the way that monitor's bar numbers it (`0` is slot 10). Your keyboard focus can stay where it is, or follow to the other monitor.
 
 ## Requirements
