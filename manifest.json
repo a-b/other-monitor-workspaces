@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "a-b.other-monitor-workspaces",
   "name": "Other Monitor Workspaces",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Al B",
   "license": "MIT",
   "description": "SUPER+CTRL+SHIFT+1..0 switches the workspace on the other monitor using Omarchy 4.5 per-monitor numbering; focus can stay put or follow.",

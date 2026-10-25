@@ -13,19 +13,23 @@ if [[ ! -f $BINDINGS ]] || ! grep -qxF -- "$BEGIN" "$BINDINGS"; then
   echo "Nothing to remove."
   exit 0
 fi
-grep -qxF -- "$END" "$BINDINGS" || fail "found '$BEGIN' but not '$END' in $BINDINGS; remove the block by hand"
-
-backup=$BINDINGS.bak.$(date +%s)
-cp "$BINDINGS" "$backup"
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT
+# awk exits 1 when a block never closes, so a missing or misplaced end marker cannot cost the rest of the file.
 awk -v begin="$BEGIN" -v end="$END" '
   $0 == begin { skip = 1; next }
   skip && $0 == end { skip = 0; next }
   !skip
-' "$BINDINGS" >"$BINDINGS.tmp"
-mv "$BINDINGS.tmp" "$BINDINGS"
+  END { exit skip }
+' "$BINDINGS" >"$tmp" || fail "found '$BEGIN' without a following '$END' in $BINDINGS; remove the block by hand"
+
+backup=$(mktemp "$BINDINGS.bak.XXXXXX")
+cp "$BINDINGS" "$backup"
+# Write through rather than mv, so a symlinked bindings.lua (dotfile managers) and its permissions survive.
+cat "$tmp" >"$BINDINGS"
 
 if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] && command -v hyprctl >/dev/null; then
-  hyprctl reload >/dev/null
+  hyprctl reload >/dev/null || echo "teardown: could not reach Hyprland; run: hyprctl reload" >&2
 fi
 
 echo "Removed the Other Monitor Workspaces block from $BINDINGS (backup: $backup)."

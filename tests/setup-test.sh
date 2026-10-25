@@ -37,15 +37,26 @@ sed -i 's/mods = "SUPER + CTRL + SHIFT"/mods = "SUPER + ALT"/' "$bindings"
 [[ $(chords | head -n1) == "SUPER + ALT + code:10" ]] || fail "mods setting should survive setup and change the chord"
 
 rm -rf "$installed"
-[[ -z $(chords) ]] || fail "a removed plugin should bind nothing and raise no error"
+out=$(chords) && [[ -z $out ]] || fail "a removed plugin should bind nothing and raise no error"
 
 "$PLUGIN_DIR/teardown" >/dev/null
 cmp -s "$bindings" "$home/original.lua" || fail "teardown should restore the original file"
 "$PLUGIN_DIR/teardown" | grep -q "Nothing to remove" || fail "second teardown should be a no-op"
 
-printf -- '-- >>> %s >>>\nkeep me\n' "$ID" >>"$bindings"
+printf -- '-- <<< %s <<<\n-- >>> %s >>>\nkeep me\n' "$ID" "$ID" >>"$bindings"
 cp "$bindings" "$home/broken.lua"
-if "$PLUGIN_DIR/teardown" >/dev/null 2>&1; then fail "teardown should refuse a block without its end marker"; fi
+if "$PLUGIN_DIR/teardown" >/dev/null 2>&1; then fail "teardown should refuse a block without a following end marker"; fi
 cmp -s "$bindings" "$home/broken.lua" || fail "a refused teardown must not change the file"
+
+# Dotfile managers may make bindings.lua a symlink: it must stay one, and edits must land in its target.
+mkdir -p "$home/dotfiles"
+cp "$home/original.lua" "$home/dotfiles/bindings.lua"
+rm -f "$bindings" "$bindings".bak.*
+ln -s "$home/dotfiles/bindings.lua" "$bindings"
+"$PLUGIN_DIR/setup" >/dev/null
+"$PLUGIN_DIR/teardown" >/dev/null
+[[ -L $bindings ]] || fail "teardown should keep a symlinked bindings.lua a symlink"
+cmp -s "$home/dotfiles/bindings.lua" "$home/original.lua" || fail "teardown should restore the symlink's target"
+[[ $(compgen -G "$bindings.bak.*" | wc -l) == 2 ]] || fail "setup and teardown in the same second should keep separate backups"
 
 echo PASS

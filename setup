@@ -15,7 +15,7 @@ if grep -qxF -- "$BEGIN" "$BINDINGS"; then
   exit 0
 fi
 
-backup=$BINDINGS.bak.$(date +%s)
+backup=$(mktemp "$BINDINGS.bak.XXXXXX")
 cp "$BINDINGS" "$backup"
 [[ ! -s $BINDINGS || -z $(tail -c1 "$BINDINGS") ]] || printf '\n' >>"$BINDINGS"
 cat >>"$BINDINGS" <<EOF
@@ -36,12 +36,21 @@ end
 -- <<< $ID <<<
 EOF
 
+reloaded=
 if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] && command -v hyprctl >/dev/null; then
-  hyprctl reload >/dev/null
-  errors=$(hyprctl configerrors 2>/dev/null || true)
-  [[ -z ${errors//[[:space:]]/} ]] || echo "setup: Hyprland reported config errors:"$'\n'"$errors" >&2
+  if hyprctl reload >/dev/null; then
+    reloaded=1
+    errors=$(hyprctl configerrors 2>/dev/null || true)
+    [[ -z ${errors//[[:space:]]/} ]] || echo "setup: Hyprland reported config errors:"$'\n'"$errors" >&2
+  else
+    echo "setup: could not reach Hyprland" >&2
+  fi
 fi
 
 echo "Added the Other Monitor Workspaces block to $BINDINGS (backup: $backup)."
-echo "SUPER + CTRL + SHIFT + 1..0 now switches the other monitor's workspace."
-echo "Change settings in that block, then run: hyprctl reload"
+if [[ -n $reloaded ]]; then
+  echo "SUPER + CTRL + SHIFT + 1..0 now switches the other monitor's workspace."
+  echo "Change settings in that block, then run: hyprctl reload"
+else
+  echo "Run hyprctl reload in your Hyprland session to turn on SUPER + CTRL + SHIFT + 1..0."
+fi

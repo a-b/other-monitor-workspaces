@@ -58,6 +58,8 @@ With that `desc:` pair, the keys switch the external monitor while you work on a
 | Three or more | The next one in Hyprland's monitor list. That is detection order, not desk position; use directions or `desc:` entries to control it. |
 | Mirrored | A mirror is skipped. |
 
+Tested with two monitors. Three or more monitors, mirrored monitors and `desc:` selectors follow from the code above but are untested; reports are welcome.
+
 ## Run from a terminal
 
 ```bash

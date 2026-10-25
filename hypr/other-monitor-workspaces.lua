@@ -12,6 +12,8 @@ function M.setup(opts)
 	local selectors = opts.selectors or { "+1" }
 	local keep_focus = opts.keep_focus ~= false
 	local mods = opts.mods or "SUPER + CTRL + SHIFT"
+	-- One Omarchy action per slot and monitor: each new one stays in o.bind_expressions until reload.
+	local actions = {}
 
 	-- Global so `hyprctl dispatch 'focus_other_monitor_workspace(3)'` and the keybindings menu can run it.
 	function focus_other_monitor_workspace(slot)
@@ -32,7 +34,9 @@ function M.setup(opts)
 			end
 
 			local window, cursor = hl.get_active_window(), hl.get_cursor_pos()
-			o.workspaces.focus(slot, other.name)()
+			local key = slot .. "@" .. other.name
+			actions[key] = actions[key] or o.workspaces.focus(slot, other.name)
+			actions[key]()
 			if not keep_focus then
 				return
 			end
