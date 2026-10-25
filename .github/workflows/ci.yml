@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The same validator `omarchy plugin validate` runs, pinned to the Omarchy release it ships in.
+      - name: Fetch Omarchy plugin validator (v4.5.0-rc1)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: omacom/omarchy
+          ref: 03ff1eff3812933f7088484533784d2f63eaf19a
+          path: .omarchy
+          sparse-checkout: bin/omarchy-plugin-validate
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Install Lua
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends lua5.4
+
+      - name: Shellcheck
+        run: shellcheck setup teardown tests/setup-test.sh
+
+      - name: Lua syntax
+        run: luac -p hypr/other-monitor-workspaces.lua
+
+      - name: Validate manifest
+        run: bash .omarchy/bin/omarchy-plugin-validate .
+
+      - name: Plugin ID is permanent
+        run: test "$(jq -r .id manifest.json)" = a-b.other-monitor-workspaces
+
+      - name: Setup and teardown tests
+        run: bash tests/setup-test.sh

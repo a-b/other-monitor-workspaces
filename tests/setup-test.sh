@@ -37,7 +37,7 @@ sed -i 's/mods = "SUPER + CTRL + SHIFT"/mods = "SUPER + ALT"/' "$bindings"
 [[ $(chords | head -n1) == "SUPER + ALT + code:10" ]] || fail "mods setting should survive setup and change the chord"
 
 rm -rf "$installed"
-out=$(chords) && [[ -z $out ]] || fail "a removed plugin should bind nothing and raise no error"
+if ! out=$(chords) || [[ -n $out ]]; then fail "a removed plugin should bind nothing and raise no error"; fi
 
 "$PLUGIN_DIR/teardown" >/dev/null
 cmp -s "$bindings" "$home/original.lua" || fail "teardown should restore the original file"
